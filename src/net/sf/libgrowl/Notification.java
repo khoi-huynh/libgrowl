@@ -148,6 +148,14 @@ private String urlCallback;
       mIcon = new ResourceIcon(iconFile);
     }
   }
+  
+  public void setIcon(final byte[] iconBytes) {
+	    if (iconBytes == null) {
+	      mIcon = null;
+	    } else {
+	      mIcon = new ResourceIcon(iconBytes);
+	    }
+	  }
 
   /**
    * get the icon for this notification

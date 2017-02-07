@@ -58,6 +58,10 @@ public class ResourceIcon extends Icon {
       e.printStackTrace();
     }
   }
+  
+  public ResourceIcon(final byte[] iconBytes) {
+	  mImageData = iconBytes;
+  }
 
   private String getBestFormat(final String[] formatNames) {
     for (String bestFormat : BEST_FORMAT) {
