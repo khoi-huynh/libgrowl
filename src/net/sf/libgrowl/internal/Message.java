@@ -3,9 +3,8 @@ package net.sf.libgrowl.internal;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -83,21 +82,20 @@ public abstract class Message implements IProtocol {
   public int send(final String host, int port) {
     String response = null;
     try {
-      writeResources();
-      // always have a line break and an empty line at the message end
       String messageText = mBuffer.toString();
-      while (!messageText.endsWith(IProtocol.LINE_BREAK + IProtocol.LINE_BREAK)) {
-        messageText = messageText + IProtocol.LINE_BREAK;
-      }
       // now start the communication
       final Socket socket = new Socket(host, port);
       socket.setSoTimeout(10000);
-      final BufferedReader in = new BufferedReader(new InputStreamReader(socket
-          .getInputStream()));
-      final OutputStreamWriter out = new OutputStreamWriter(socket
-          .getOutputStream(), "UTF-8");
-      final PrintWriter writer = new PrintWriter(out);
+      final BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+      final OutputStream out = socket.getOutputStream();
+      final OutputStreamWriter writer = new OutputStreamWriter(out, "UTF-8");
       writer.write(messageText);
+      
+      writeResources(out, writer);
+
+      // always have a line break and an empty line at the message end
+      writer.write(IProtocol.LINE_BREAK);
+      
       writer.flush();
       System.out.println("------------------------");
       System.out.println(messageText);
@@ -127,29 +125,29 @@ public abstract class Message implements IProtocol {
 
   /**
    * write the collected resources to the output stream
+   * @throws IOException 
    */
-  private void writeResources() {
-    for (Map.Entry<String, byte[]> entry : mResources.entrySet()) {
-      lineBreak();
-      final String id = entry.getKey();
-      byte[] data = entry.getValue();
-      if (data == null) {
-        data = new byte[0];
+  private void writeResources(OutputStream out, OutputStreamWriter writer) throws IOException {
+	  for (Map.Entry<String, byte[]> entry : mResources.entrySet()) {
+          writer.write(IProtocol.LINE_BREAK);
+          
+          final String id = entry.getKey();
+          byte[] data = entry.getValue();
+          if (data == null) {
+            data = new byte[0];
+          }
+          
+          writer.write(IProtocol.HEADER_IDENTIFIER+": "+id);
+          writer.write(IProtocol.LINE_BREAK);
+          writer.write(IProtocol.HEADER_LENGTH+": "+String.valueOf(data.length));
+          writer.write(IProtocol.LINE_BREAK);
+          
+          // image data in bytes
+          writer.write(IProtocol.LINE_BREAK);
+          writer.flush();
+          out.write(data);
+          writer.write(IProtocol.LINE_BREAK);
       }
-      header(IProtocol.HEADER_IDENTIFIER, id);
-      header(IProtocol.HEADER_LENGTH, data.length);
-      lineBreak();
-      try {
-        mBuffer.append(new String(data, "UTF-8"));
-      } catch (UnsupportedEncodingException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      }
-      /*
-       * for (byte b : data) { mBuffer.append((char) b); }
-       */
-      lineBreak();
-    }
   }
 
   private int getError(final String response) {
